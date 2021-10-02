@@ -1,9 +1,7 @@
 Running suite(s): Default
-40%: Checks: 30, Failures: 13, Errors: 5
-public.c:46:F:Public:C_void_func:0: Assertion 'valid_program("def void foo() { }")' failed
+46%: Checks: 30, Failures: 10, Errors: 6
+public.c:66:E:Public:D_invalid_vardecl_no_semicolon:0: (after this point) Received signal 11 (Segmentation fault)
 public.c:47:F:Public:C_assign:0: Assertion 'valid_program("def int main () { " "int a; a = 5;" " }")' failed
-public.c:48:F:Public:C_break:0: Assertion 'valid_program("def int main () { " "break;" " }")' failed
-public.c:49:F:Public:C_continue:0: Assertion 'valid_program("def int main () { " "continue;" " }")' failed
 public.c:50:F:Public:C_return:0: Assertion 'valid_program("def int main () { " "return;" " }")' failed
 public.c:51:F:Public:C_return_val:0: Assertion 'valid_program("def int main () { " "return 0;" " }")' failed
 public.c:78:E:Public:C_declit:0: (after this point) Received signal 11 (Segmentation fault)
