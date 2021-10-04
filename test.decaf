@@ -1,2 +1,2 @@
-int foo;
-bool bar;
+def void foo () {
+}

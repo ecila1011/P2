@@ -153,6 +153,11 @@ void parse_id(TokenQueue *input, char *buffer)
     Token_free(token);
 }
 
+/**
+ * @brief Parse a variable declaration
+ * 
+ * @param input Token queue to modify
+ */
 ASTNode *parse_vardecl(TokenQueue *input)
 {
     /*
@@ -162,7 +167,15 @@ ASTNode *parse_vardecl(TokenQueue *input)
     char buffer[MAX_TOKEN_LEN];
     parse_id(input, buffer);
     int arrayLength = -1;
+
     // If array...
+
+    // make sure queue is not empty
+    if (TokenQueue_is_empty(input)) 
+    {
+        match_and_discard_next_token(input, SYM, ";");
+    }
+
     char* first = TokenQueue_peek(input)->text;
     if (token_str_eq("\\[", first))
     {
@@ -172,57 +185,183 @@ ASTNode *parse_vardecl(TokenQueue *input)
         // Second Bracket
         match_and_discard_next_token(input, SYM, "]");
     }
+
     match_and_discard_next_token(input, SYM, ";");
+
     if (arrayLength >= 0)
     {
         return VarDeclNode_new(buffer, t, true, arrayLength, 1);
     }
+
     return VarDeclNode_new(buffer, t, false, 0, 1);
 }
 
+/**
+ * @brief Parse an expression
+ * 
+ * @param input Token queue to modify
+ */
+ASTNode *parse_expression(TokenQueue *input)
+{
+    char *type = TokenType_to_string(TokenQueue_peek(input)->type);
+    
+    // Base Expressions
+    if (token_str_eq("ID", type))
+    {
+        // Loc or FuncCall
+    }
+    else if (token_str_eq("DECLIT", type)) 
+    {
+        // decimal literal
+    }
+    else if (token_str_eq("HEXLIT", type))
+    {
+        // hex literal
+    }
+    else if (token_str_eq("STRLIT", type))
+    {
+        // string literal
+    }
+    return NULL;
+}
+
+/**
+ * @brief Parse a decaf statement
+ * 
+ * @param input Token queue to modify
+ * @param isValid if the statement is valid
+ */
 ASTNode *parse_statement(TokenQueue *input, bool* isValid)
 {
-    Token* first = TokenQueue_peek(input);
-    if (token_str_eq("break",first->text))
+    char* type = TokenType_to_string(TokenQueue_peek(input)->type);
+    char* first = TokenQueue_peek(input)->text;
+
+    if (token_str_eq("if", first)) 
+    {
+        // if statement
+    }
+    else if (token_str_eq("while", first)) 
+    {
+        // while statement
+    }
+    else if (token_str_eq("return", first)) 
+    {
+        free(TokenQueue_remove(input));
+        parse_expression(input);
+        match_and_discard_next_token(input, SYM, ";");
+        return ReturnNode_new(NULL, 1);
+    }
+    else if (token_str_eq("break",first))
     {
         free(TokenQueue_remove(input));
         match_and_discard_next_token(input, SYM, ";");
         return BreakNode_new(1);
     }
-        if (token_str_eq("continue",first->text))
+    else if (token_str_eq("continue",first))
     {
         free(TokenQueue_remove(input));
         match_and_discard_next_token(input, SYM, ";");
         return ContinueNode_new(1);
     }
+    else if (token_str_eq("other",type)) // idk what to do for this if
+    {
+        // find ID
+        char buffer[MAX_TOKEN_LEN];
+        parse_id(input, buffer);
+
+        first = TokenQueue_peek(input)->text;
+
+        // if we find (), then its a function call
+        if (token_str_eq("\\(", first)) // function call
+        {
+            match_and_discard_next_token(input, SYM, "\\)");
+            if (token_str_eq("\\)", TokenQueue_peek(input)->text)) 
+            {
+                match_and_discard_next_token(input, SYM, "\\)");
+            }
+            else 
+            {
+                // parse args
+                match_and_discard_next_token(input, SYM, "\\)");
+            }
+            // discard semicolon
+            match_and_discard_next_token(input, SYM, ";");
+
+            // create the function node 
+            // IDK IF THIS GOES HERE
+            return FuncCallNode_new(first, 1);
+        }
+        else if (token_str_eq("[", first)) // if we see [] its a loc
+        {
+            match_and_discard_next_token(input, SYM, "[");
+            // parse expression
+
+            match_and_discard_next_token(input, SYM, "]");
+            // ignore =
+
+            match_and_discard_next_token(input, SYM, "=");
+            // parse expression
+
+            match_and_discard_next_token(input, SYM, ";");
+        }
+        else // no [], but still Loc
+        {
+            // parse expression
+            return LocationNode_new(first, 0, 1);
+        }
+
+    }
+
     *isValid = false;
     return NULL;
 }
 
+/**
+ * @brief Parse a decaf block
+ * 
+ * @param input Token queue to modify
+ */
 ASTNode *parse_block(TokenQueue *input)
 {
+    // create a block node
     ASTNode *block = BlockNode_new(1);
+
+    // discard the first bracket {
     match_and_discard_next_token(input, SYM, "{");
     bool isValid = true;
     // Statements
     // While program still says valid
     while (!TokenQueue_is_empty(input) && isValid)
     {
+        // also check for variable declarations??? or that may be part of statement
         parse_statement(input, &isValid);
     }
     match_and_discard_next_token(input, SYM, "}");
     return block;
 }
 
+/**
+ * @brief Parse a func declaration
+ * 
+ * @param input Token queue to modify
+ */
 ASTNode *parse_funcdecl(TokenQueue *input)
 {
+    // we know we have already seen def
+    // find the Type
     DecafType t = parse_type(input);
+
+    // find the ID
     char buffer[MAX_TOKEN_LEN];
     parse_id(input, buffer);
-    // RESTART HERE FOR PARAMETERS
+
     match_and_discard_next_token(input, SYM, "(");
+    // RESTART HERE FOR PARAMETERS
     match_and_discard_next_token(input, SYM, ")");
+
+    // BLOCK
     ASTNode *block_node = parse_block(input);
+
     return FuncDeclNode_new(buffer, t, NULL, block_node, 1);
 }
 

@@ -1,8 +1,6 @@
 Running suite(s): Default
-46%: Checks: 30, Failures: 10, Errors: 6
-public.c:66:E:Public:D_invalid_vardecl_no_semicolon:0: (after this point) Received signal 11 (Segmentation fault)
+53%: Checks: 30, Failures: 9, Errors: 5
 public.c:47:F:Public:C_assign:0: Assertion 'valid_program("def int main () { " "int a; a = 5;" " }")' failed
-public.c:50:F:Public:C_return:0: Assertion 'valid_program("def int main () { " "return;" " }")' failed
 public.c:51:F:Public:C_return_val:0: Assertion 'valid_program("def int main () { " "return 0;" " }")' failed
 public.c:78:E:Public:C_declit:0: (after this point) Received signal 11 (Segmentation fault)
 public.c:79:E:Public:C_hexlit:0: (after this point) Received signal 11 (Segmentation fault)
