@@ -1,2 +1,3 @@
-def void foo () {
+def int main () {
+    return 0;
 }

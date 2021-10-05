@@ -1,7 +1,5 @@
 Running suite(s): Default
-53%: Checks: 30, Failures: 9, Errors: 5
-public.c:47:F:Public:C_assign:0: Assertion 'valid_program("def int main () { " "int a; a = 5;" " }")' failed
-public.c:51:F:Public:C_return_val:0: Assertion 'valid_program("def int main () { " "return 0;" " }")' failed
+60%: Checks: 30, Failures: 7, Errors: 5
 public.c:78:E:Public:C_declit:0: (after this point) Received signal 11 (Segmentation fault)
 public.c:79:E:Public:C_hexlit:0: (after this point) Received signal 11 (Segmentation fault)
 public.c:80:E:Public:C_strlit:0: (after this point) Received signal 11 (Segmentation fault)
