@@ -234,7 +234,10 @@ ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
     }
     else if (type == HEXLIT) // hex literal
     {
-        // hex literal
+        Token *token = TokenQueue_remove(input);
+        int num = strtol(token->text, NULL, 16);
+        free(token);
+        n = LiteralNode_new_int(num, 1);
     }
     else if (type == STRLIT) // string literal
     {
@@ -522,9 +525,11 @@ ASTNode *parse_funcdecl(TokenQueue *input)
     parse_id(input, buffer);
 
     match_and_discard_next_token(input, SYM, "(");
+
     // RESTART HERE FOR PARAMETERS
     ParameterList *params = NULL;
     char param_buffer[MAX_TOKEN_LEN];
+
     while (!token_str_eq(")", TokenQueue_peek(input)->text))
     {
         DecafType dt = parse_type(input);
@@ -538,6 +543,7 @@ ASTNode *parse_funcdecl(TokenQueue *input)
 
     // BLOCK
     ASTNode *block_node = parse_block(input);
+    
 
     return FuncDeclNode_new(buffer, t, params, block_node, 1);
 }
@@ -552,11 +558,13 @@ ASTNode *parse_program(TokenQueue *input)
 
     while (!TokenQueue_is_empty(input))
     {
+        // printf("%s", TokenQueue_peek(input)->text);
+        // printf("%d", strncmp("def", TokenQueue_peek(input)->text, MAX_TOKEN_LEN));
         if (token_str_eq("def", TokenQueue_peek(input)->text))
         {
             Token *token = TokenQueue_remove(input);
             free(token);
-            NodeList_add(node->program.variables, parse_funcdecl(input));
+            NodeList_add(node->program.functions, parse_funcdecl(input));
         }
         else
         {
