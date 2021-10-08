@@ -1,9 +1,8 @@
 Running suite(s): Default
-76%: Checks: 30, Failures: 2, Errors: 5
+80%: Checks: 30, Failures: 1, Errors: 5
 public.c:78:E:Public:C_declit:0: (after this point) Received signal 11 (Segmentation fault)
 public.c:79:E:Public:C_hexlit:0: (after this point) Received signal 11 (Segmentation fault)
 public.c:80:E:Public:C_strlit:0: (after this point) Received signal 11 (Segmentation fault)
-public.c:72:F:Public:B_invalid_add:0: Assertion 'invalid_program("def int main () { return " "3++8" " ; }")' failed
 public.c:58:F:Public:A_arrays:0: Assertion 'valid_program("int a[5]; def int main() { a[1] = 7; return a[1]; }")' failed
 public.c:81:E:Public:A_newline:0: (after this point) Received signal 11 (Segmentation fault)
 private.c:5:E:Private:A_null_token_queue:0: (after this point) Received signal 11 (Segmentation fault)

@@ -208,18 +208,19 @@ ASTNode *parse_vardecl(TokenQueue *input)
  * 
  * @param input Token queue to modify
  */
-ASTNode *parse_expression(TokenQueue *input)
+ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
 {
     TokenType type = TokenQueue_peek(input)->type;
     char *text = TokenQueue_peek(input)->text;
     ASTNode *n = NULL;
-    // Base Expressions
-    if (token_str_eq("-", text))
+    // Unary Operators
+    if (token_str_eq("!", text) && !hasParsedOp)
     {
-        UnaryOpType op = NEGOP;
+        UnaryOpType op = NOTOP;
         free(TokenQueue_remove(input));
-        n = UnaryOpNode_new(op, parse_expression(input), 1);
+        n = UnaryOpNode_new(op, parse_expression(input, true), 1);
     }
+    // Base Expressions
     if (type == ID)
     {
         // Loc or FuncCall
@@ -253,18 +254,83 @@ ASTNode *parse_expression(TokenQueue *input)
         n = LiteralNode_new_bool(false, 1);
     }
     text = TokenQueue_peek(input)->text;
-    if (token_str_eq("+", text))
+    if (token_str_eq("-", text) && n != NULL && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = SUBOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    }
+    else if (token_str_eq("-", text) && n == NULL && !hasParsedOp)
+    {
+        UnaryOpType op = NEGOP;
+        free(TokenQueue_remove(input));
+        n = UnaryOpNode_new(op, parse_expression(input, true), 1);
+    }
+    if (token_str_eq("+", text) && !hasParsedOp)
     {
         free(TokenQueue_remove(input));
         BinaryOpType op = ADDOP;
-        n = BinaryOpNode_new(op, n, parse_expression(input), 1);
-    } else if (token_str_eq("&&", text))
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    } else if (token_str_eq("&&", text) && !hasParsedOp)
     {
         free(TokenQueue_remove(input));
         BinaryOpType op = ANDOP;
-        n = BinaryOpNode_new(op, n, parse_expression(input), 1);
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    } else if (token_str_eq("||", text) && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = OROP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
     }
-    // STILL HAVE OTHER UNARY/BINARY OPERATORS TO DO. THE ONES ABOVE IS JUST FOR THE TEST.
+     else if (token_str_eq("==", text) && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = EQOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    }
+     else if (token_str_eq("!=", text) && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = NEQOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    } else if (token_str_eq("<=", text) && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = LEOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    } else if (token_str_eq("<", text) && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = LTOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    }
+     else if (token_str_eq(">=", text) && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = GEOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    } else if (token_str_eq(">", text) && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input) && !hasParsedOp);
+        BinaryOpType op = GTOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    } else if (token_str_eq("*", text))
+    {
+        free(TokenQueue_remove(input) && !hasParsedOp);
+        BinaryOpType op = MULOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    } else if (token_str_eq("/", text))
+    {
+        free(TokenQueue_remove(input) && !hasParsedOp);
+        BinaryOpType op = DIVOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    }
+    else if (token_str_eq("%", text) && !hasParsedOp)
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = MODOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+    }
     return n;
 }
 
@@ -285,7 +351,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
         match_and_discard_next_token(input, SYM, "("); // skip (
 
         // parse and save condition node
-        ASTNode *condition = parse_expression(input);
+        ASTNode *condition = parse_expression(input, false);
 
         match_and_discard_next_token(input, SYM, ")"); // skip )
 
@@ -307,7 +373,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
         match_and_discard_next_token(input, SYM, "("); // skip (
 
         // parse and save condition node
-        ASTNode *condition = parse_expression(input);
+        ASTNode *condition = parse_expression(input, false);
 
         match_and_discard_next_token(input, SYM, ")"); // skip )
 
@@ -321,7 +387,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
         free(TokenQueue_remove(input));
 
         // parse and save return statement
-        ASTNode *expr = parse_expression(input);
+        ASTNode *expr = parse_expression(input, false);
 
         match_and_discard_next_token(input, SYM, ";"); // skip ;
 
@@ -374,7 +440,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
         {
             match_and_discard_next_token(input, SYM, "["); // skip [
 
-            ASTNode *index = parse_expression(input);
+            ASTNode *index = parse_expression(input, false);
 
             match_and_discard_next_token(input, SYM, "]"); // skip ]
 
@@ -390,7 +456,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
         {
             match_and_discard_next_token(input, SYM, "="); // skip =
 
-            parse_expression(input);
+            parse_expression(input, false);
 
             match_and_discard_next_token(input, SYM, ";"); // skip ;
 
