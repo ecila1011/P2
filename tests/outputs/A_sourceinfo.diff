@@ -1,8 +1,17 @@
---- outputs/A_sourceinfo.txt	2021-10-08 15:00:37.681196179 -0400
+--- outputs/A_sourceinfo.txt	2021-10-08 19:14:16.485812928 -0400
 +++ expected/A_sourceinfo.txt	2021-09-19 19:10:06.000000000 -0400
-@@ -0,0 +1,11 @@
-+Program [line 1]
-+  FuncDecl name="main" return_type=int parameters={} [line 1]
+@@ -1,11 +1,11 @@
+ Program [line 1]
+   FuncDecl name="main" return_type=int parameters={} [line 1]
+-    Block [line 1]
+-      VarDecl name="a" type=int is_array=no array_length=0 [line 1]
+-      Assignment [line 1]
+-        Location name="a" [line 1]
+-        Binaryop op="+" [line 1]
+-          Literal type=int value=4 [line 1]
+-          Literal type=int value=5 [line 1]
+-      Return [line 1]
+-        Location name="a" [line 1]
 +    Block [line 2]
 +      VarDecl name="a" type=int is_array=no array_length=1 [line 3]
 +      Assignment [line 4]
