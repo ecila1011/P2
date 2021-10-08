@@ -176,12 +176,12 @@ ASTNode *parse_vardecl(TokenQueue *input)
     // If array...
 
     // make sure queue is not empty
-    if (TokenQueue_is_empty(input)) 
+    if (TokenQueue_is_empty(input))
     {
         match_and_discard_next_token(input, SYM, ";");
     }
 
-    char* first = TokenQueue_peek(input)->text;
+    char *first = TokenQueue_peek(input)->text;
 
     // see if there are brackets and take care of them (arrays)
     if (token_str_eq("\\[", first))
@@ -212,8 +212,14 @@ ASTNode *parse_expression(TokenQueue *input)
 {
     TokenType type = TokenQueue_peek(input)->type;
     char *text = TokenQueue_peek(input)->text;
-    
+    ASTNode *n = NULL;
     // Base Expressions
+    if (token_str_eq("-", text))
+    {
+        UnaryOpType op = NEGOP;
+        free(TokenQueue_remove(input));
+        n = UnaryOpNode_new(op, parse_expression(input), 1);
+    }
     if (type == ID)
     {
         // Loc or FuncCall
@@ -223,7 +229,7 @@ ASTNode *parse_expression(TokenQueue *input)
         Token *token = TokenQueue_remove(input);
         int num = strtol(token->text, NULL, 10);
         free(token);
-        return LiteralNode_new_int(num, 1);
+        n = LiteralNode_new_int(num, 1);
     }
     else if (type == HEXLIT) // hex literal
     {
@@ -234,14 +240,32 @@ ASTNode *parse_expression(TokenQueue *input)
         Token *token = TokenQueue_remove(input);
         char *str = (token->text);
         free(token);
-        return LiteralNode_new_string(str, 1);
+        n = LiteralNode_new_string(str, 1);
     }
     else if (token_str_eq("true", text))
     {
         free(TokenQueue_remove(input));
-        LiteralNode_new_bool(true, 1);
+        n = LiteralNode_new_bool(true, 1);
     }
-    return NULL;
+    else if (token_str_eq("false", text))
+    {
+        free(TokenQueue_remove(input));
+        n = LiteralNode_new_bool(false, 1);
+    }
+    text = TokenQueue_peek(input)->text;
+    if (token_str_eq("+", text))
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = ADDOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input), 1);
+    } else if (token_str_eq("&&", text))
+    {
+        free(TokenQueue_remove(input));
+        BinaryOpType op = ANDOP;
+        n = BinaryOpNode_new(op, n, parse_expression(input), 1);
+    }
+    // STILL HAVE OTHER UNARY/BINARY OPERATORS TO DO. THE ONES ABOVE IS JUST FOR THE TEST.
+    return n;
 }
 
 /**
@@ -250,10 +274,10 @@ ASTNode *parse_expression(TokenQueue *input)
  * @param input Token queue to modify
  * @param isValid if the statement is valid
  */
-ASTNode *parse_statement(TokenQueue *input, bool* isValid)
+ASTNode *parse_statement(TokenQueue *input, bool *isValid)
 {
     TokenType type = TokenQueue_peek(input)->type;
-    char* first = TokenQueue_peek(input)->text;
+    char *first = TokenQueue_peek(input)->text;
 
     if (token_str_eq("if", first)) // if statement
     {
@@ -269,7 +293,7 @@ ASTNode *parse_statement(TokenQueue *input, bool* isValid)
         ASTNode *if_block = parse_block(input);
 
         // check for else statement
-        ASTNode *else_block = parse_block(input);
+        ASTNode *else_block = NULL;
         if (token_str_eq("else", TokenQueue_peek(input)->text))
         {
             else_block = parse_block(input);
@@ -277,22 +301,22 @@ ASTNode *parse_statement(TokenQueue *input, bool* isValid)
 
         return ConditionalNode_new(condition, if_block, else_block, 1);
     }
-    else if (token_str_eq("while", first)) 
+    else if (token_str_eq("while", first))
     {
         free(TokenQueue_remove(input));
-        match_and_discard_next_token(input, SYM, "\\("); // skip (
+        match_and_discard_next_token(input, SYM, "("); // skip (
 
         // parse and save condition node
         ASTNode *condition = parse_expression(input);
 
-        match_and_discard_next_token(input, SYM, "\\)"); // skip )
+        match_and_discard_next_token(input, SYM, ")"); // skip )
 
         // parse and save while block
         ASTNode *while_block = parse_block(input);
 
         return WhileLoopNode_new(condition, while_block, 1);
     }
-    else if (token_str_eq("return", first)) 
+    else if (token_str_eq("return", first))
     {
         free(TokenQueue_remove(input));
 
@@ -303,14 +327,14 @@ ASTNode *parse_statement(TokenQueue *input, bool* isValid)
 
         return ReturnNode_new(expr, 1);
     }
-    else if (token_str_eq("break",first))
+    else if (token_str_eq("break", first))
     {
         free(TokenQueue_remove(input));
         // has no expression or block, so just skip semicolon
         match_and_discard_next_token(input, SYM, ";");
         return BreakNode_new(1);
     }
-    else if (token_str_eq("continue",first))
+    else if (token_str_eq("continue", first))
     {
         free(TokenQueue_remove(input));
         // has no expression or block, so just skip semicolon
@@ -331,7 +355,7 @@ ASTNode *parse_statement(TokenQueue *input, bool* isValid)
             match_and_discard_next_token(input, SYM, "\\)"); // skip (
 
             // if next token is ), then discard and move on
-            if (token_str_eq("\\)", TokenQueue_peek(input)->text)) 
+            if (token_str_eq("\\)", TokenQueue_peek(input)->text))
             {
                 match_and_discard_next_token(input, SYM, "\\)"); // skip )
             }
@@ -343,7 +367,7 @@ ASTNode *parse_statement(TokenQueue *input, bool* isValid)
 
             match_and_discard_next_token(input, SYM, ";"); // skip ;
 
-            // create the function node 
+            // create the function node
             return FuncCallNode_new(buffer, 1);
         }
         else if (token_str_eq("[", first)) // if we see [] its a loc
@@ -372,7 +396,6 @@ ASTNode *parse_statement(TokenQueue *input, bool* isValid)
 
             return LocationNode_new(buffer, NULL, 1);
         }
-
     }
 
     *isValid = false;
@@ -407,12 +430,12 @@ ASTNode *parse_block(TokenQueue *input)
         {
             parse_vardecl(input);
         }
-        else // parse as a statement 
-        { 
-        parse_statement(input, &isValid);
+        else // parse as a statement
+        {
+            parse_statement(input, &isValid);
         }
     }
-    
+
     match_and_discard_next_token(input, SYM, "}");
     return block;
 }
@@ -434,12 +457,23 @@ ASTNode *parse_funcdecl(TokenQueue *input)
 
     match_and_discard_next_token(input, SYM, "(");
     // RESTART HERE FOR PARAMETERS
+    ParameterList *params = NULL;
+    char param_buffer[MAX_TOKEN_LEN];
+    while (!token_str_eq(")", TokenQueue_peek(input)->text))
+    {
+        DecafType dt = parse_type(input);
+        parse_id(input, buffer);
+        if (token_str_eq(",", TokenQueue_peek(input)->text))
+        {
+            match_and_discard_next_token(input, SYM, ",");
+        }
+    }
     match_and_discard_next_token(input, SYM, ")");
 
     // BLOCK
     ASTNode *block_node = parse_block(input);
 
-    return FuncDeclNode_new(buffer, t, NULL, block_node, 1);
+    return FuncDeclNode_new(buffer, t, params, block_node, 1);
 }
 
 /*
@@ -466,7 +500,7 @@ ASTNode *parse_program(TokenQueue *input)
     return node;
 }
 
-ASTNode* parse(TokenQueue* input)
+ASTNode *parse(TokenQueue *input)
 {
     return parse_program(input);
 }
