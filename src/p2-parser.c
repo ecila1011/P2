@@ -170,6 +170,7 @@ ASTNode *parse_vardecl(TokenQueue *input)
     */
     DecafType t = parse_type(input);
     char buffer[MAX_TOKEN_LEN];
+    int line = get_next_token_line(input);
     parse_id(input, buffer);
     int arrayLength = -1;
 
@@ -189,6 +190,11 @@ ASTNode *parse_vardecl(TokenQueue *input)
         // First bracket
         match_and_discard_next_token(input, SYM, "[");
 
+        if (check_next_token_type(input, DECLIT))
+        {
+            char *text = TokenQueue_remove(input)->text;
+            arrayLength = strtol(text, NULL, 10);
+        }
         // Second Bracket
         match_and_discard_next_token(input, SYM, "]");
     }
@@ -197,10 +203,10 @@ ASTNode *parse_vardecl(TokenQueue *input)
 
     if (arrayLength >= 0)
     {
-        return VarDeclNode_new(buffer, t, true, arrayLength, 1);
+        return VarDeclNode_new(buffer, t, true, arrayLength, line);
     }
 
-    return VarDeclNode_new(buffer, t, false, 0, 1);
+    return VarDeclNode_new(buffer, t, false, 1, line);
 }
 
 /**
@@ -211,9 +217,10 @@ ASTNode *parse_vardecl(TokenQueue *input)
 ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
 {
     ASTNode *n = NULL;
-
+    int line = get_next_token_line(input);
     // make sure queue is not empty
-    if (!TokenQueue_is_empty(input)) {
+    if (!TokenQueue_is_empty(input))
+    {
 
         //TokenType type = TokenQueue_peek(input)->type;
         char *text = TokenQueue_peek(input)->text;
@@ -223,7 +230,7 @@ ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
         {
             UnaryOpType op = NOTOP;
             free(TokenQueue_remove(input));
-            n = UnaryOpNode_new(op, parse_expression(input, true), 1);
+            n = UnaryOpNode_new(op, parse_expression(input, true), line);
         }
 
         // Base Expressions
@@ -238,8 +245,8 @@ ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
             // if we find (), then its a function call
             if (token_str_eq("(", first)) // function call
             {
-                ASTNode *node = FuncCallNode_new(buffer, 1);
-                
+                ASTNode *node = FuncCallNode_new(buffer, line);
+
                 match_and_discard_next_token(input, SYM, "("); // skip (
 
                 while (!token_str_eq(")", TokenQueue_peek(input)->text))
@@ -273,7 +280,7 @@ ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
             }
             else // no [], but still Loc
             {
-                ASTNode *loc = LocationNode_new(buffer, NULL, 1);
+                ASTNode *loc = LocationNode_new(buffer, NULL, line);
 
                 //match_and_discard_next_token(input, SYM, ";"); // skip ;
 
@@ -285,116 +292,140 @@ ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
             Token *token = TokenQueue_remove(input);
             int num = strtol(token->text, NULL, 10);
             free(token);
-            n = LiteralNode_new_int(num, 1);
+            n = LiteralNode_new_int(num, line);
         }
         else if (check_next_token_type(input, HEXLIT)) // hex literal
         {
             Token *token = TokenQueue_remove(input);
             int num = strtol(token->text, NULL, 16);
             free(token);
-            n = LiteralNode_new_int(num, 1);
+            n = LiteralNode_new_int(num, line);
         }
         else if (check_next_token_type(input, STRLIT)) // string literal
         {
             Token *token = TokenQueue_remove(input);
             char *str = (token->text);
+            // Remove quotes from beginning and end
+            ssize_t length = strlen(str) - 1;
+            *(str + (length * sizeof(char))) = NULL;
+            str = str + sizeof(char);
+            // Handle new line characters
+            char *ptr = strstr(str, "\\n");
+            if (ptr != NULL)
+            {
+                *ptr = '\n';
+                ptr += sizeof(char);
+                while (*ptr != NULL)
+                {
+                    *ptr = *(ptr + sizeof(char));
+                    ptr += sizeof(char);
+                }
+            }
             free(token);
-            n = LiteralNode_new_string(str, 1);
+            n = LiteralNode_new_string(str, line);
         }
         else if (token_str_eq("true", text)) // true
         {
             free(TokenQueue_remove(input));
-            n = LiteralNode_new_bool(true, 1);
+            n = LiteralNode_new_bool(true, line);
         }
         else if (token_str_eq("false", text)) // false
         {
             free(TokenQueue_remove(input));
-            n = LiteralNode_new_bool(false, 1);
+            n = LiteralNode_new_bool(false, line);
         }
     }
 
     // Need to make sure the queue is not empty!!!!
-    if (!TokenQueue_is_empty(input)) {
+    if (!TokenQueue_is_empty(input))
+    {
 
         char *text = TokenQueue_peek(input)->text;
-
+        // Handling negative versus substraction
         if (token_str_eq("-", text) && n != NULL && !hasParsedOp) // subtraction
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = SUBOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
         }
         else if (token_str_eq("-", text) && n == NULL && !hasParsedOp) // negative
         {
             UnaryOpType op = NEGOP;
             free(TokenQueue_remove(input));
-            n = UnaryOpNode_new(op, parse_expression(input, true), 1);
+            n = UnaryOpNode_new(op, parse_expression(input, true), line);
         }
-
+        // Binary Operations
         if (token_str_eq("+", text) && !hasParsedOp) // plus
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = ADDOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
-        } else if (token_str_eq("&&", text) && !hasParsedOp)
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
+        }
+        else if (token_str_eq("&&", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = ANDOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
-        } else if (token_str_eq("||", text) && !hasParsedOp)
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
+        }
+        else if (token_str_eq("||", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = OROP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
         }
         else if (token_str_eq("==", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = EQOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
         }
         else if (token_str_eq("!=", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = NEQOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
-        } else if (token_str_eq("<=", text) && !hasParsedOp)
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
+        }
+        else if (token_str_eq("<=", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = LEOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
-        } else if (token_str_eq("<", text) && !hasParsedOp)
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
+        }
+        else if (token_str_eq("<", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = LTOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
         }
         else if (token_str_eq(">=", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = GEOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
-        } else if (token_str_eq(">", text) && !hasParsedOp)
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
+        }
+        else if (token_str_eq(">", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input) && !hasParsedOp);
             BinaryOpType op = GTOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
-        } else if (token_str_eq("*", text))
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
+        }
+        else if (token_str_eq("*", text))
         {
             free(TokenQueue_remove(input) && !hasParsedOp);
             BinaryOpType op = MULOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
-        } else if (token_str_eq("/", text))
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
+        }
+        else if (token_str_eq("/", text))
         {
             free(TokenQueue_remove(input) && !hasParsedOp);
             BinaryOpType op = DIVOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
         }
         else if (token_str_eq("%", text) && !hasParsedOp)
         {
             free(TokenQueue_remove(input));
             BinaryOpType op = MODOP;
-            n = BinaryOpNode_new(op, n, parse_expression(input, true), 1);
+            n = BinaryOpNode_new(op, n, parse_expression(input, true), line);
         }
     }
     return n;
@@ -409,11 +440,12 @@ ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
 ASTNode *parse_statement(TokenQueue *input, bool *isValid)
 {
     // make sure token queue is not null
-    if (TokenQueue_is_empty(input)){
+    if (TokenQueue_is_empty(input))
+    {
         ASTNode *n = NULL;
         return n;
     }
-
+    int line = get_next_token_line(input);
     TokenType type = TokenQueue_peek(input)->type;
     char *first = TokenQueue_peek(input)->text;
 
@@ -437,7 +469,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
             else_block = parse_block(input);
         }
 
-        return ConditionalNode_new(condition, if_block, else_block, 1);
+        return ConditionalNode_new(condition, if_block, else_block, line);
     }
     else if (token_str_eq("while", first))
     {
@@ -452,7 +484,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
         // parse and save while block
         ASTNode *while_block = parse_block(input);
 
-        return WhileLoopNode_new(condition, while_block, 1);
+        return WhileLoopNode_new(condition, while_block, line);
     }
     else if (token_str_eq("return", first))
     {
@@ -463,35 +495,35 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
 
         match_and_discard_next_token(input, SYM, ";"); // skip ;
 
-        return ReturnNode_new(expr, 1);
+        return ReturnNode_new(expr, line);
     }
     else if (token_str_eq("break", first))
     {
         free(TokenQueue_remove(input));
         // has no expression or block, so just skip semicolon
         match_and_discard_next_token(input, SYM, ";");
-        return BreakNode_new(1);
+        return BreakNode_new(line);
     }
     else if (token_str_eq("continue", first))
     {
         free(TokenQueue_remove(input));
         // has no expression or block, so just skip semicolon
         match_and_discard_next_token(input, SYM, ";");
-        return ContinueNode_new(1);
+        return ContinueNode_new(line);
     }
     else if (type == ID)
     {
         // find ID
         char buffer[MAX_TOKEN_LEN];
         parse_id(input, buffer);
-
+line = get_next_token_line(input);
         first = TokenQueue_peek(input)->text;
 
         // if we find (), then its a function call
         if (token_str_eq("(", first)) // function call
         {
-            ASTNode *node = FuncCallNode_new(buffer, 1);
-            
+            ASTNode *node = FuncCallNode_new(buffer, line);
+
             match_and_discard_next_token(input, SYM, "("); // skip (
 
             while (!token_str_eq(")", TokenQueue_peek(input)->text))
@@ -502,7 +534,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
                     match_and_discard_next_token(input, SYM, ",");
                 }
             }
-            
+
             match_and_discard_next_token(input, SYM, ")"); // skip )
             match_and_discard_next_token(input, SYM, ";"); // skip ;
 
@@ -517,7 +549,7 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
 
             match_and_discard_next_token(input, SYM, "]"); // skip ]
 
-            ASTNode *loc = LocationNode_new(buffer, index, 1);
+            ASTNode *loc = LocationNode_new(buffer, index, line);
 
             match_and_discard_next_token(input, SYM, "="); // skip =
 
@@ -525,19 +557,19 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
 
             match_and_discard_next_token(input, SYM, ";"); // skip ;
 
-            return AssignmentNode_new(loc, expr, 1);
+            return AssignmentNode_new(loc, expr, line);
         }
         else // no [], but still Loc
         {
-            ASTNode *loc = LocationNode_new(buffer, NULL, 1);
-            
+            ASTNode *loc = LocationNode_new(buffer, NULL, line);
+
             match_and_discard_next_token(input, SYM, "="); // skip =
 
             ASTNode *expr = parse_expression(input, false);
 
             match_and_discard_next_token(input, SYM, ";"); // skip ;
 
-            return AssignmentNode_new(loc, expr, 1);
+            return AssignmentNode_new(loc, expr, line);
         }
     }
 
@@ -552,8 +584,9 @@ ASTNode *parse_statement(TokenQueue *input, bool *isValid)
  */
 ASTNode *parse_block(TokenQueue *input)
 {
+    int line = get_next_token_line(input);
     // create a block node
-    ASTNode *node = BlockNode_new(1);
+    ASTNode *node = BlockNode_new(line);
 
     // discard the first bracket {
     match_and_discard_next_token(input, SYM, "{");
@@ -594,6 +627,7 @@ ASTNode *parse_funcdecl(TokenQueue *input)
 {
     // we know we have already seen def
     // find the Type
+    int line = get_next_token_line(input);
     DecafType t = parse_type(input);
 
     // find the ID
@@ -622,7 +656,7 @@ ASTNode *parse_funcdecl(TokenQueue *input)
     // BLOCK
     ASTNode *block_node = parse_block(input);
 
-    return FuncDeclNode_new(buffer, t, params, block_node, 1);
+    return FuncDeclNode_new(buffer, t, params, block_node, line);
 }
 
 /*
@@ -632,7 +666,10 @@ ASTNode *parse_funcdecl(TokenQueue *input)
 ASTNode *parse_program(TokenQueue *input)
 {
     ASTNode *node = ProgramNode_new();
-
+    if (input == NULL)
+    {
+        Error_throw_printf("No input provided\n");
+    }
     while (!TokenQueue_is_empty(input))
     {
         // printf("%s", TokenQueue_peek(input)->text);
