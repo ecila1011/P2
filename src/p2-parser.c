@@ -174,8 +174,6 @@ ASTNode *parse_vardecl(TokenQueue *input)
     parse_id(input, buffer);
     int arrayLength = -1;
 
-    // If array...
-
     // make sure queue is not empty
     if (TokenQueue_is_empty(input))
     {
@@ -185,7 +183,7 @@ ASTNode *parse_vardecl(TokenQueue *input)
     char *first = TokenQueue_peek(input)->text;
 
     // see if there are brackets and take care of them (arrays)
-    if (token_str_eq("\\[", first))
+    if (token_str_eq("[", first))
     {
         // First bracket
         match_and_discard_next_token(input, SYM, "[");
@@ -354,6 +352,7 @@ ASTNode *parse_expression(TokenQueue *input, bool hasParsedOp)
             free(TokenQueue_remove(input));
             n = UnaryOpNode_new(op, parse_expression(input, true), line);
         }
+        
         // Binary Operations
         if (token_str_eq("+", text) && !hasParsedOp) // plus
         {

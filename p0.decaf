@@ -1,0 +1,290 @@
+// CS 432 PROJECT 0: DECAF PROGRAMMING
+// Alice Robertson
+
+def int fact(int n)
+{
+    int factorial;
+    factorial = n;
+
+    while (n > 2)
+    {
+        factorial = factorial * (n - 1);
+        n = n - 1;
+    }
+    return factorial;
+}
+
+def int fib(int n)
+{
+    int num1;
+    int num2;
+    int i;
+    int temp;
+
+    i = 2;
+    num1 = 1;
+    num2 = 1;
+
+    while (i < n)
+    {
+        temp = num2;
+        num2 = num1 + num2;
+        num1 = temp;
+        i = i + 1;
+    }
+
+    return num2;
+}
+
+def bool is_prime(int n)
+{
+    int i;
+    bool prime;
+
+    i = 2;
+    prime = true;
+
+    // 0 and 1 are not prime numbers
+    if (n == 1 || n == 0)
+    {
+        prime = false;
+    }
+
+    while (i < n && prime)
+    {
+        if ( n % i == 0 )
+        {
+            prime = false;
+        }
+        i = i + 1;
+    }
+    return prime;
+}
+
+def int gcd(int a, int b)
+{
+    int i;
+    int g;
+
+    i = 1;
+    g = 1;
+
+    while (i <= a && i <= b)
+    {
+        if (a % i == 0 && b % i == 0)
+        {
+            g = i;
+        }
+        i = i + 1;
+    }
+
+    return g;
+}
+
+int nums[100];
+
+def int sum_nums(int len)
+{
+    int i;
+    int sum;
+
+    i = 0;
+    sum = 0;
+
+    while (i < len)
+    {
+        sum = sum + nums[i];
+        i = i + 1;
+    }
+
+    return sum;
+}
+
+def void sort_nums(int len)
+{
+    int i;
+    int j;
+    int curr;
+
+    i = 1;
+
+    while (i < len)
+    {
+        // set curr to our current element and initialize j
+        curr = nums[i];
+        j = i - 1;
+
+        // loop through the array and move any elements greater than curr up one
+        while ( j >= 0 && nums[j] > curr)
+        {
+            nums[j + 1] = nums[j];
+            j = j - 1;
+        }
+
+        // set the current element to its new position and increment counter
+        nums[j + 1] = curr;
+        i = i + 1;
+    }
+
+    return;
+}
+
+def void draw_triangle(int base)
+{
+    int level;
+    int elements;
+    int spaces;
+    int temp;
+
+    // initialize the top level of elements 
+    if (base % 2 == 0)
+    {
+        elements = 2;
+    }
+    else
+    {
+        elements = 1;
+    }
+
+    // initialize the starting level and number of spaces for the top level
+    level = (base + 1) / 2;
+    spaces = (base - 1) / 2;
+
+    // loop where the triangle is printed
+    while (level > 0)
+    {
+        // print spaces
+        temp = 0;
+        while (temp < spaces)
+        {
+            print_str(" ");
+            temp = temp + 1;
+        }
+
+        // print #
+        temp = 0;
+        while (temp < elements)
+        {
+            print_str("#");
+            temp = temp + 1;
+        }
+
+        // increment our variables and print newline character
+        print_str("\n");
+        elements = elements + 2;
+        spaces = spaces - 1;
+        level = level - 1;
+    }
+
+    return;
+}
+
+def int main()
+{
+
+    int i;
+    int len;
+
+    // factorial method testing
+    print_str( "Factorial of 2: ");
+    print_int( fact(2) );
+    print_str( "\nFactorial of 3: ");
+    print_int( fact(3) );
+    print_str( "\nFactorial of 8: ");
+    print_int( fact(8) );
+
+    // fibonacci method testing
+    print_str( "\n1st Fibonacci Number: ");
+    print_int( fib(1) );
+    print_str( "\n3rd Fibonacci Number: ");
+    print_int( fib(3) );
+    print_str( "\n4th Fibonacci Number: ");
+    print_int( fib(4) );
+    print_str( "\n8th Fibonacci Number: ");
+    print_int( fib(8) );
+
+    // is_prime method testing
+    print_str( "\n3 is prime: ");
+    print_bool( is_prime(2) );
+    print_str( "\n12 is prime: ");
+    print_bool( is_prime(12) );
+    print_str( "\n31 is prime: ");
+    print_bool( is_prime(31) );
+    print_str( "\n443 is prime: ");
+    print_bool( is_prime(443) );
+    print_str( "\n445 is prime: ");
+    print_bool( is_prime(445) );
+
+    // make nums array
+    i = 0;
+    len = 10;
+    while (i < len)
+    {
+        nums[i] = 1 + i;
+        i = i + 1;
+    }
+
+    // sum of numbers method testing
+    print_str( "\nSum of first 0 elements: ");
+    print_int( sum_nums(0) );
+    print_str( "\nSum of first 1 elements: ");
+    print_int( sum_nums(1) );
+    print_str( "\nSum of first 2 elements: ");
+    print_int( sum_nums(2) );
+
+    i = 0;
+    while (i < len)
+    {
+        if (i % 2 == 0)
+        {
+            nums[i] = i * 3;
+        }
+        i = i + 1;
+    }
+
+    // sort nums method testing
+    print_str( "\nSort the first element: ");
+    sort_nums(1);
+    print_int( nums[0] );
+    print_str( "\nSort the first 4 elements: ");
+    sort_nums(4);
+    print_int( nums[0] );
+    print_int( nums[1] );
+    print_int( nums[2] );
+    print_int( nums[3] );
+    print_str( "\nSort the first 10 elements: ");
+    sort_nums(10);
+    print_int( nums[0] );
+    print_int( nums[1] );
+    print_int( nums[2] );
+    print_int( nums[3] );
+    print_int( nums[4] );
+    print_int( nums[5] );
+    print_int( nums[6] );
+    print_int( nums[7] );
+    print_int( nums[8] );
+    print_int( nums[9] );
+
+
+    // gcd method testing
+    print_str( "\nGCD of 8 and 12: ");
+    print_int( gcd(8,12) );
+    print_str( "\nGCD of 7 and 12: ");
+    print_int( gcd(7,12) );
+    print_str( "\nGCD of 36 and 6: ");
+    print_int( gcd(36,6) );
+
+    // draw triangle testing
+    print_str( "\nBase = 3 \n");
+    draw_triangle(3);
+    print_str( "\nBase = 4 \n");
+    draw_triangle(4);
+    print_str( "\nBase = 9 \n");
+    draw_triangle(9);
+    print_str( "\nBase = 12 \n");
+    draw_triangle(12);
+
+    print_str( "\n");
+    return 2;
+}
+
